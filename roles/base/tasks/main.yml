@@ -1,0 +1,10 @@
+---
+  - name: Installation des paquets
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - python-pip
+      - python-dev
+      - python3-pip
+      - python3-dev
+      - python-psycopg2
+      - python3-psycopg2

@@ -1,0 +1,17 @@
+---
+  - name: Install Redis
+    apt: name=redis-server update_cache=yes state=latest
+
+  - name: Copy de la configuration
+    copy:
+      src: ../files/redis.conf
+      dest: /etc/redis/redis.conf
+      owner: redis
+      group: redis
+      mode: u=rw,g=r,o=r
+
+  - name: Demarrage du service Redis
+    service:
+      name: redis-server
+      state: restarted
+      enabled: true

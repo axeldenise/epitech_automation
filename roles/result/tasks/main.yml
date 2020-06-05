@@ -1,0 +1,58 @@
+---
+    - name: Copie de result.tar
+      copy:
+        src: ../../../result.tar
+        dest: ~/result.tar
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+    
+    - name: Copie du service
+      copy:
+        src: ../files/result.service
+        dest: /etc/systemd/system/result.service
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+    - name: Modification POSTGRESQL_HOST dans le service
+      lineinfile: 
+        dest: /etc/systemd/system/result.service
+        regexp: '^(.*)Environment=POSTGRESQL_HOST=(.*)$' 
+        line: "Environment=POSTGRESQL_HOST={{ hostvars[inventory_hostname].groups.Postgresql[0] }}"
+        backrefs: yes
+
+    - name: Modification POSTGRESQL_PASSWORD dans le service
+      lineinfile: 
+        dest: /etc/systemd/system/result.service
+        regexp: '^(.*)Environment=POSTGRESQL_PASSWORD=(.*)$' 
+        line: "Environment=POSTGRESQL_PASSWORD={{ database_password }}"
+        backrefs: yes
+
+    - name: Extraction result.tar
+      unarchive:
+        src: ~/result.tar
+        dest: ~/
+        remote_src: yes
+
+    - name: Installation de paquets
+      apt: name={{item}} update_cache=yes state=latest
+      with_items:
+        - curl
+        - software-properties-common
+
+    - name: Ajout du depot nodeJs LTS
+      shell: curl -sL https://deb.nodesource.com/setup_12.x | bash -
+
+    - name: Installation node-js
+      apt: name=nodejs update_cache=yes state=latest
+
+    - name: Installation des dépendences avec npm
+      npm:
+        path: ~/result/
+
+    - name: Demarrage du service result
+      service:
+        name: result
+        state: started
+        enabled: true

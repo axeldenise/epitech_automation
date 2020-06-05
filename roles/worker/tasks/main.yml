@@ -1,0 +1,102 @@
+---
+  - name: Installation de openjdk
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - openjdk-11-jdk
+      - libasound2 
+      - libasound2-data
+
+  - name: Telechargement Apachage Maven 3.6.0
+    get_url:
+      url: http://www-eu.apache.org/dist/maven/maven-3/3.6.1/binaries/apache-maven-3.6.1-bin.tar.gz
+      dest: /usr/local
+      force: no
+
+  - name: Extraction Apache Maven 3.6.1
+    unarchive:
+        src: /usr/local/apache-maven-3.6.1-bin.tar.gz
+        dest: /usr/local
+        remote_src: yes
+
+  - name: Creation d'un lien symbolique, Apache-maven-numVersion -> apache-maven
+    file:
+      src: /usr/local/apache-maven-3.6.1
+      dest: /usr/local/apache-maven
+      owner: root
+      group: root
+      state: link
+
+  - name: Telechargement Java
+    get_url:
+      url: https://download.oracle.com/otn-pub/java/jdk/13.0.1+9/cec27d702aa74d5a8630c65ae61e4305/jdk-13.0.1_linux-x64_bin.deb
+      dest: ~/
+      force: no
+      headers:
+        Cookie: oraclelicense=accept-securebackup-cookie 
+
+  - name: Installation de Java
+    apt: deb="~/jdk-13.0.1_linux-x64_bin.deb"
+
+  - name: Copy de worker.tar
+    copy:
+      src: ../../../worker.tar
+      dest: ~/worker.tar
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Copie du service
+    copy:
+      src: ../files/worker.service
+      dest: /etc/systemd/system/worker.service
+      owner: root
+      group: root
+      mode: u=rw,g=r,o=r
+
+  - name: Modification REDIS_HOST dans le service
+    lineinfile: 
+      dest: /etc/systemd/system/worker.service
+      regexp: '^(.*)Environment=REDIS_HOST=(.*)$' 
+      line: "Environment=REDIS_HOST={{ hostvars[inventory_hostname].groups.Redis[0] }}"
+      backrefs: yes
+
+  - name: Modification POSTGRESQL_HOST dans le service
+    lineinfile: 
+      dest: /etc/systemd/system/worker.service
+      regexp: '^(.*)Environment=POSTGRESQL_HOST=(.*)$' 
+      line: "Environment=POSTGRESQL_HOST={{ hostvars[inventory_hostname].groups.Postgresql[0] }}"
+      backrefs: yes
+
+  - name: Modification POSTGRESQL_PASSWORD dans le service
+    lineinfile: 
+      dest: /etc/systemd/system/worker.service
+      regexp: '^(.*)Environment=POSTGRESQL_PASSWORD=(.*)$' 
+      line: "Environment=POSTGRESQL_PASSWORD={{ database_password }}"
+      backrefs: yes
+
+  - name: Extraction result.tar
+    unarchive:
+      src: ~/worker.tar
+      dest: ~/
+      remote_src: yes
+  
+  - name: resolution des dependences mvn
+    shell: /usr/local/apache-maven/bin/mvn dependency:resolve
+    args:
+      chdir: ~/worker
+
+  - name: clean install mvn
+    shell: /usr/local/apache-maven/bin/mvn clean install
+    args:
+      chdir: ~/worker
+
+  - name: package mvn
+    shell: /usr/local/apache-maven/bin/mvn package
+    args:
+      chdir: ~/worker
+
+  - name: Demarrage du service worker
+    service:
+      name: worker
+      state: started
+      enabled: true

@@ -1,0 +1,44 @@
+---
+
+- name: Installation Base
+  hosts: all
+  remote_user: root
+
+  roles:
+    - base
+
+- name: Configuration Poll
+  hosts: Poll
+  remote_user: root
+
+  roles:
+      - poll
+
+- name: Configuration Redis
+  hosts: Redis
+  remote_user: root
+
+  roles:
+    - redis
+
+- name: Configuration Postgresql
+  hosts: Postgresql
+  remote_user: root
+
+  roles:
+    - postgresql
+
+- name: Configuration Result
+  hosts: Result
+  remote_user: root
+
+  roles:
+    - result
+
+- name: Configuration Worker
+  hosts: Worker
+  remote_user: root
+
+  roles:
+    - worker
+...

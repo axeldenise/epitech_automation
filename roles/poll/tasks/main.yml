@@ -1,0 +1,39 @@
+---
+    - name: Copie de poll.tar
+      copy:
+        src: ../../../poll.tar
+        dest: ~/poll.tar
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+    - name: Copie du service
+      copy:
+        src: ../files/poll.service
+        dest: /etc/systemd/system/poll.service
+        owner: root
+        group: root
+        mode: u=rw,g=r,o=r
+
+    - name: Modification REDIS_HOST dans le service
+      lineinfile: 
+        dest: /etc/systemd/system/poll.service
+        regexp: '^(.*)Environment=REDIS_HOST=(.*)$' 
+        line: "Environment=REDIS_HOST={{ hostvars[inventory_hostname].groups.Redis[0] }}"
+        backrefs: yes
+
+    - name: Extraction poll.tar
+      unarchive:
+        src: ~/poll.tar
+        dest: ~/
+        remote_src: yes
+
+    - name: Installation des dépendences
+      pip:
+        requirements: ~/poll/requirements.txt
+
+    - name: Demarrage du service Poll
+      service:
+        name: poll
+        state: started
+        enabled: true

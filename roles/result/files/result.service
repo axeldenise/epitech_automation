@@ -1,0 +1,19 @@
+[Unit]
+Description=Lancement de l'application result
+After=network-online.target
+
+[Service]
+
+User=root
+Environment=PORT=80
+Environment=POSTGRESQL_USER=paul
+Environment=POSTGRESQL_PASSWORD=
+Environment=POSTGRESQL_HOST=
+Environment=POSTGRESQL_DB=paul
+Environment=POSTGRESQL_PORT=5432
+WorkingDirectory=/root/result/
+ExecStart=node server.js
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

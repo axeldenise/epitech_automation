@@ -1,0 +1,20 @@
+[Unit]
+Description=Lancement de l'application worker
+After=network-online.target
+
+[Service]
+
+User=root
+Environment=PORT=80
+Environment=POSTGRESQL_USER=paul
+Environment=POSTGRESQL_PASSWORD=
+Environment=POSTGRESQL_HOST=
+Environment=POSTGRESQL_DB=paul
+Environment=POSTGRESQL_PORT=5432
+Environment=REDIS_HOST=
+WorkingDirectory=/root/worker/target/
+ExecStart=java -jar worker-jar-with-dependencies.jar
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

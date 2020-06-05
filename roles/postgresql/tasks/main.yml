@@ -1,0 +1,96 @@
+---
+
+  - name: Mise a jour paquets
+    apt:
+      upgrade: dist
+
+  - name: Installation paquets
+    apt: name={{item}} update_cache=yes state=latest
+    with_items:
+      - gnupg2
+      - wget
+      - libpq-dev
+
+  - name: Ajout du depot PostgreSQL
+    shell:  echo "deb http://apt.postgresql.org/pub/repos/apt/ buster-pgdg main" | tee  /etc/apt/sources.list.d/pgdg.list
+  
+  - name: Importation clef GPG
+    shell: wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+  
+  - name: Install PostgreSQL 12
+    apt: name={{item}} update_cache=yes state=present
+    with_items:
+      - postgresql-12
+
+  - name: Copy config Postgresql
+    copy:
+      src: ../files/postgresql.conf
+      dest: /etc/postgresql/12/main
+      owner: postgres
+      group: postgres
+      mode: u=rw,g=r,o=r
+
+
+  - name: Copy pg_hba Postgresql
+    copy:
+      src: ../files/pg_hba.conf
+      dest: /etc/postgresql/12/main
+      owner: postgres
+      group: postgres
+      mode: u=rw,g=r,o=r
+
+  - name: Lancement Service PostgreSQL
+    service:
+        name: postgresql
+        state: started
+        enabled: true
+    
+  - name: Copie de schema.sql
+    copy:
+      src: ../files/schema.sql
+      dest: /tmp/schema.sql
+      owner: postgres
+      group: postgres
+      mode: u=rw,g=r,o=r
+
+  - name: Creation base de donnees Paul
+    become: true
+    become_user: postgres
+    postgresql_db:
+      name: paul
+
+  - name: Creation table votes
+    become: true
+    become_user: postgres
+    postgresql_db:
+      name: paul
+      state: restore
+      target: /tmp/schema.sql
+
+  - name: Creation de l'utilisateur Paul
+    become: true
+    become_user: postgres
+    postgresql_user:
+      db: paul
+      name: paul
+      password: "{{ database_password }}"
+      priv: "CONNECT/votes:ALL"
+
+  - name: Modification RESULT_ADDR dans la config
+    lineinfile: 
+      dest: /etc/postgresql/12/main/pg_hba.conf
+      regexp: '^(.*)RESULT_CONFIG(.*)$' 
+      line: "host paul paul {{ hostvars[inventory_hostname].groups.Result[0] }}/32 password"
+      backrefs: yes
+
+  - name: Modification WORKER_ADDR dans la config
+    lineinfile: 
+      dest: /etc/postgresql/12/main/pg_hba.conf
+      regexp: '^(.*)WORKER_CONFIG(.*)$' 
+      line: "host paul paul {{ hostvars[inventory_hostname].groups.Worker[0] }}/32 password"
+      backrefs: yes
+
+  - name: Rechargement Service PostgreSQL
+    service:
+        name: postgresql
+        state: restarted
